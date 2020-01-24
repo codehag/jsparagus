@@ -9,11 +9,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: [3.7]
     - name: Setup venv
       run: sudo apt-get install python3-venv
     - name: Setup python     
       run: python3 -m venv venv && source venv/bin/activate&& pip3 install --upgrade pip && pip3 install -r requirements.txt
-    - name: Make
-      run: make all && make check
     - name: Build
-      run: cd rust && cargo build --verbose
+      run: make all
+    - name: Test
+      run: make check
