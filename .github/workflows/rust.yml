@@ -1,0 +1,17 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup
+      run: python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
+    - name: Make
+      run: make all && make check
+    - name: Build
+      run: cd rust && cargo build --verbose
