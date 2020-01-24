@@ -9,8 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Setup
-      run: apt-get install && apt-get install python3-venv && python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
+    - name: Setup venv
+      run: sudo apt-get install && apt-get install 
+    - name: Setup python     
+      run: python3-venv && python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
     - name: Make
       run: make all && make check
     - name: Build
