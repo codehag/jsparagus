@@ -12,7 +12,7 @@ jobs:
     - name: Setup venv
       run: sudo apt-get install python3-venv
     - name: Setup python     
-      run: python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
+      run: python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt
     - name: Make
       run: make all && make check
     - name: Build
