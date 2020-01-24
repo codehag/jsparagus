@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: actions/checkout@v1
     - name: Setup
-      run: python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
+      run: apt-get install python3-venv && python3 -m venv venv && source venv/bin/activate&& pip install --upgrade pip && pip install -r requirements.txt && cargo install cargo-fmt
     - name: Make
       run: make all && make check
     - name: Build
