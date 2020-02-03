@@ -1,3 +1,5 @@
+![Build](https://github.com/mozilla-spidermonkey/jsparagus/workflows/Build/badge.svg)
+
 # jsparagus - A JavaScript parser written in Rust
 
 jsparagus is intended to replace the JavaScript parser in Firefox.
