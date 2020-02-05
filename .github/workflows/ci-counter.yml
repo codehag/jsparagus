@@ -14,9 +14,9 @@ jobs:
         echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .github/workflows/count.json
         find rust -type f -exec cat {} + | grep -c NotImplemented >> .github/workflows/count.json
         echo '","color":"yellow","cacheSeconds":1800}' >> .github/workflows/count.json
+    - uses: actions/checkout@ci-results
     - name: Commit files
       run: |
-        git checkout ci-results
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git commit -m "update NotImplemented Count" -a
