@@ -15,6 +15,7 @@ jobs:
         echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .results/count.json
         find rust -type f -exec cat {} + | grep -c NotImplemented >> .results/count.json
         echo '","color":"yellow","cacheSeconds":1800}' >> .results/count.json
+        tr '\n' ' ' < .results/count.json
     - name: Commit files
       run: |
         git checkout -b ci-results
