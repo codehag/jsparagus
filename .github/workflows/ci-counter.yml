@@ -1,9 +1,6 @@
 name: Count NotImplemented
 
-on:
-  push:
-      branches:
-      - master
+on: [push]
 
 jobs:
   build:
