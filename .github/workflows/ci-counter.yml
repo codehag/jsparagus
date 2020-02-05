@@ -12,7 +12,7 @@ jobs:
     - name: Count NotImplimented
       run: |
         mkdir .results
-        echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .results/count-tm.json
+        echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .results/count-tmp.json
         find rust -type f -exec cat {} + | grep -c NotImplemented >> .results/count-tmp.json
         echo '","color":"yellow","cacheSeconds":1800}' >> .results/count-tmp.json
         tr '\n' ' ' < .results/count-tmp.json > .results/count.json
