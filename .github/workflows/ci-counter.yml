@@ -16,7 +16,7 @@ jobs:
         echo '","color":"yellow","cacheSeconds":1800}' >> .github/workflows/count.json
     - name: Commit files
       run: |
-        git co -b ci-results
+        git checkout -b ci-results
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git commit -m "update NotImplemented Count" -a
