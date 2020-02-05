@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Count NotImplimented
-        run: |
+      run: |
         echo {"schemaVersion":1,"label":"NotImplemented Count","message":"", > .github/workflows/count.json
         find rust-type f -exec cat {} + | grep -c NotImplemented >>  .github/workflows/count.json
         echo "color":"yellow","cacheSeconds":1800} > .github/workflows/count.json
