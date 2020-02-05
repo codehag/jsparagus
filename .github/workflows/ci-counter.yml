@@ -11,12 +11,15 @@ jobs:
     - uses: actions/checkout@v2
     - name: Count NotImplimented
       run: |
-        echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .github/workflows/count.json
-        find rust -type f -exec cat {} + | grep -c NotImplemented >> .github/workflows/count.json
-        echo '","color":"yellow","cacheSeconds":1800}' >> .github/workflows/count.json
-    - uses: actions/checkout@ci-counter
+        echo '{"schemaVersion":1,"label":"NotImplemented Count","message":"' > .github/workflows/count-new.json
+        find rust -type f -exec cat {} + | grep -c NotImplemented >> .github/workflows/count-new.json
+        echo '","color":"yellow","cacheSeconds":1800}' >> .github/workflows/count-new.json
     - name: Commit files
       run: |
+        git pull origin ci-results
+        git checkout ci-results
+        rm .github/workflows/count.json
+        mv .github/workflows/count-new.json .github/workflows/count.json
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
         git commit -m "update NotImplemented Count" -a
