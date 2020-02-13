@@ -25,7 +25,8 @@ jobs:
         cp .metrics/tests_compiled_badge.py /tmp
         cp .metrics/tests_compiled_count.py /tmp
         cp .metrics/generated_README.md /tmp/README.md
-        cp .metrics/fifo-read.sh /tmp/fifo-read.sh
+        cp .metrics/fifo-read.py /tmp/fifo-read.py
+        cp .metrics/exclude-tests.txt /tmp/exclude-tests.txt
         git rev-parse HEAD > /tmp/commit
     - uses: actions/checkout@v2
       with:
@@ -46,6 +47,7 @@ jobs:
       run: |
         export SHELL="/bin/sh"
         cd smoosh
+        cargo install cbindgen
         sudo apt-get update
         ./mach bootstrap --no-interactive --application-choice "Firefox for Desktop Artifact Mode"
         cd js/src
@@ -54,21 +56,22 @@ jobs:
         make -j 4
     - name: Run Tests
       shell: bash
+      continue-on-error: true
       run: |
         cd smoosh
-        export SHELL="/bin/bash"
-        chmod 775 /tmp/fifo-read.sh
-        sh /tmp/fifo-read.sh & ./mach jstests --shell js/src/build_OPT.OBJ/dist/bin/js test262 --args "--smoosh --not-implemented-watchfile /tmp/notimplemented_fifo"
+        export SHELL="/bin/sh"
+        python /tmp/fifo-read.py & sudo ./mach jstests --shell js/src/build_OPT.OBJ/dist/bin/js test262  --args "--smoosh --not-implemented-watchfile /tmp/notimplemented_fifo"
         echo "q" >> /tmp/notimplemented_fifo
+        #./mach jstests --shell js/src/build_OPT.OBJ/dist/bin/js test262/language/expressions/coalesce --args "--smoosh --not-implemented-watchfile /tmp/notimplemented_output"
         cd ..
-        rm -r smoosh
     - name: Sync metrics files
       run: |
         # Make sure the generating files are up to date
         cp -f /tmp/fuzzbug_date_badge.py .metrics/fuzzbug_date_badge.py
         cp -f /tmp/tests_compiled_badge.py .metrics/tests_compiled_badge.py
         cp -f /tmp/tests_compiled_count.py .metrics/tests_compiled_count.py
-        cp -f /tmp/fifo-read.sh .metrics/fifo-read.sh
+        cp -f /tmp/exclude-tests.txt .metrics/exclude-tests.txt
+        cp -f /tmp/fifo-read.py .metrics/fifo-read.py
         cp -f /tmp/README.md README.md
         git add .
     - name: Get Percentage of Tests Compiled
@@ -82,6 +85,17 @@ jobs:
         git add count/tests_compiled.json
         python tests_compiled_badge.py
         git add badges/test-percentage-compiled.json
+     # - name: FOO BAR
+     #   run: |
+     #     python /tmp/fifo-read.py & echo "hi"
+     #     echo "1010101111101010101010101" >> /tmp/notimplemented_fifo
+     #     echo "1" >> /tmp/notimplemented_fifo
+     #     echo "DIFFERENT" >> /tmp/notimplemented_fifo
+     #     echo /tmp/notimplemented_output
+     #     echo "YET ANOTHER" >> /tmp/notimplemented_fifo
+     #     echo "q" >> /tmp/notimplemented_fifo
+     #     sleep 5
+     #     cat /tmp/notimplemented_output
     - name: Get Fuzzbugs
       run: |
         cd .metrics
