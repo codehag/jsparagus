@@ -5,7 +5,7 @@ import os.path
 filename = 'badges/test-percentage-compiled.json'
 count_failed = int(os.environ['count_failed'])
 count_tests = int(os.environ['count_tests'])
-percentage = (float(count_tests) / float(count_tests - count_failed)) * 100
+percentage = int((float(count_tests - count_failed) / float(count_tests)) * 100)
 
 def get_color(percent):
     if percent > 95:
@@ -17,7 +17,7 @@ def get_color(percent):
 
 data = {
     "schemaVersion": 1,
-    "label": "NotImplemented",
+    "label": "Percentage Passing",
     "message": str(percentage) + "%",
     "color": get_color(percentage),
 }

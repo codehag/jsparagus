@@ -1,6 +1,6 @@
 {
     "schemaVersion": 1,
-    "label": "NotImplemented",
-    "message": "100.00365360199486%",
+    "label": "Percentage Passing",
+    "message": "99%",
     "color": "green"
 }
