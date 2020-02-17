@@ -12,7 +12,7 @@ with open(filename, 'r+') as f:
     data = json.load(f)
     count_failed = int(os.environ['count_failed'])
     count_tests = int(os.environ['count_tests'])
-    percentage = count_tests / count_tests - count_failed
+    percentage = (count_tests / count_tests - count_failed) * 100
     if len(data) == 0 or data[-1]["commit"] != os.environ['current_commit']:
         data.append({
             "commit": os.environ['current_commit'],
