@@ -1,6 +1,6 @@
 {
-    "color": "red", 
-    "schemaVersion": 1, 
-    "message": "0", 
-    "label": "Days since last FuzzBug"
+    "schemaVersion": 1,
+    "label": "Days since last FuzzBug",
+    "message": "8",
+    "color": "red"
 }
