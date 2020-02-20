@@ -34,5 +34,9 @@
     {
         "commit": "3add468cf417441eb475d3ababd31d6688628365",
         "percentage": "100.0%"
+    },
+    {
+        "commit": "a0560e72a6ef31043e1293f1828869843d926e30",
+        "percentage": "99.99634653148833%"
     }
 ]
