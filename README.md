@@ -1,5 +1,6 @@
 [![Rust][Rust Badge]][Rust CI Link]
 [![NotImplemented Counter][NotImplemented Badge]][NotImplemented Search]
+[![Percentage tests][TestPercentage Badge]][NotImplemented Search]
 [![Fuzzbug days since][Fuzzbug Days Badge]][Fuzzbugs]
 [![Fuzzbug open][Fuzzbug Open Badge]][Open Fuzzbugs]
 
@@ -15,19 +16,23 @@ These are the types of data that this metrics folder tracks.
 
 1) NotImplemented Count
     * counts number of NotImplemented errors in the codebase. This should slowly rundown to zero
-    * Updates on every push to master. See [this action](.github/workflows/ci-counter.yml)
+    * Updates on every push to master. See [this
+        action](https://github.com/mozilla-spidermonkey/jsparagus/tree/master/.github/workflows/ci-push.yml)
 
 2) Days Since last Fuzzbug
     * tracks the last fuzzbug we saw, if it does not exist, return ∞, otherwise return the last date regardless of state.
-    * Updates daily, regardless of push. See [this action](.github/workflows/ci-daily.yml)
+    * Updates daily, regardless of push. See [this
+        action](https://github.com/mozilla-spidermonkey/jsparagus/tree/master/.github/workflows/ci-daily.yml)
 
 3) Fuzzbug open count
     * tracks the number of open fuzzbugs
-    * Updates daily, regardless of push. See [this action](.github/workflows/ci-daily.yml)
+    * Updates daily, regardless of push. See [this
+        action](https://github.com/mozilla-spidermonkey/jsparagus/tree/master/.github/workflows/ci-issues.yml)
 
 4) Percentage of tests passing with SmooshMonkey
     * TODO: tracks the number of tests passing without fallback. We should use the try api for this.
-    * Updates daily, regardless of push. See [this action](.github/workflows/ci-daily.yml)
+    * Updates daily, regardless of push. See [this
+        action](https://github.com/mozilla-spidermonkey/jsparagus/tree/master/.github/workflows/ci-daily.yml)
 
 
 5) Percentage of JS compilable with SmooshMonkey
@@ -42,3 +47,4 @@ These are the types of data that this metrics folder tracks.
 [Fuzzbug Open Badge]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmozilla-spidermonkey%2Fjsparagus%2Fci_results%2F.metrics%2Fbadges%2Fopen-fuzzbug.json
 [Fuzzbugs]: https://github.com/mozilla-spidermonkey/jsparagus/issues?utf8=%E2%9C%93&q=label%3AlibFuzzer+
 [Open Fuzzbugs]: https://github.com/mozilla-spidermonkey/jsparagus/labels/libFuzzer
+[TestPercentage Badge]: https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fmozilla-spidermonkey%2Fjsparagus%2Fci_results%2F.metrics%2Fbadges%2Ftest-percentage-compiled.json
