@@ -12,6 +12,11 @@ VENV_BIN_DIR := $(JSPARAGUS_DIR)jsparagus_build_venv/bin
 PYTHON := $(VENV_BIN_DIR)/python
 PIP := $(VENV_BIN_DIR)/pip
 
+init-ci:
+	python3 -m venv jsparagus_build_venv &&\
+	$(PIP) install --upgrade pip &&\
+	$(PIP) install -r requirements.txt
+
 init:
 	python3 -m venv jsparagus_build_venv &&\
 	$(PIP) install --upgrade pip &&\

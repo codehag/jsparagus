@@ -1,0 +1,39 @@
+name: Generate Files
+
+on: [push]
+  #  push:
+  #      branches:
+  #      - master
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    # Check out master, so that we can count.
+    - uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: "3.7"
+    - name: Generate Files
+      # Record the count in a tmp file so it survives changing branches
+      run: |
+        make init-ci && make all
+        sed -i.bak '/*_generated.rs/d' .gitignore
+        git add .
+    - name: Commit files
+      # fails if no files to commit
+      continue-on-error: true
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git commit -m "update NotImplemented Count" -a
+    - name: Push changes
+      uses: ad-m/github-push-action@master
+      continue-on-error: true
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        branch: ci_generated
+        force: true
