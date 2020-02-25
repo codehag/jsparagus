@@ -1,6 +1,6 @@
 {
     "schemaVersion": 1,
     "label": "Percentage Passing",
-    "message": "99%",
-    "color": "green"
+    "message": "-421%",
+    "color": "red"
 }
