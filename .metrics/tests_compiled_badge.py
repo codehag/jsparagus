@@ -3,9 +3,9 @@ import json
 import os.path
 
 filename = 'badges/test-percentage-compiled.json'
-count_failed = int(os.environ['count_failed'])
-count_tests = int(os.environ['count_tests'])
-percentage = int((float(count_tests - count_failed) / float(count_tests)) * 100)
+count_passed = float(int(os.environ['count_passed']))
+count_tests = float(int(os.environ['count_tests']))
+percentage = int((count_passed / count_tests) * 100)
 
 def get_color(percent):
     if percent > 95:
