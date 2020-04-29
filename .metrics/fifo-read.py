@@ -1,5 +1,6 @@
 import os
 import errno
+import select
 
 fifo_name="/tmp/notimplemented_fifo"
 notimplemented_output="/tmp/notimplemented_output"
@@ -9,15 +10,16 @@ try:
 except:
     pass;
 
-
-while True:
-    with open(fifo_name) as fifo:
-        for line in fifo:
-            for ch in line:
-                if (ch == "q"):
-                    fifo.close();
-                    break;
-                with open(notimplemented_output, 'a') as f:
-                    f.write(ch);
+print "opening";
+with open(fifo_name) as fifo:
+    with open(notimplemented_output, 'a') as f:
+        while True:
+            select.select([fifo],[],[fifo])
+            line = fifo.read()
+            print repr(line)
+            if (line == "q\n"):
+                fifo.close();
                 break;
-            break;
+            for ch in line:
+                f.write(ch);
+
