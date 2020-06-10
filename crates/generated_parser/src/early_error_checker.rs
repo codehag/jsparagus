@@ -650,3 +650,30 @@ pub trait EarlyErrorChecker<'alloc> {
         Ok(())
     }
 }
+
+pub struct EarlyErrorBuilder<'alloc> {
+    context_metadata: ContextMetadata,
+
+    atoms: Rc<RefCell<SourceAtomSet<'alloc>>>,
+}
+
+impl<'alloc> EarlyErrorBuilder<'alloc> {
+    pub fn new(atoms: Rc<RefCell<SourceAtomSet<'alloc>>>) -> Self {
+        Self {
+            context_metadata: ContextMetadata::new(),
+            atoms,
+        }
+    }
+}
+
+impl<'alloc> EarlyErrorChecker<'alloc> for EarlyErrorBuilder<'alloc> {
+    fn context_metadata_mut(&mut self) -> &mut ContextMetadata {
+        &mut self.context_metadata
+    }
+    fn context_metadata(&self) -> &ContextMetadata {
+        &self.context_metadata
+    }
+    fn atoms(&self) -> &Rc<RefCell<SourceAtomSet<'alloc>>> {
+        &self.atoms
+    }
+}

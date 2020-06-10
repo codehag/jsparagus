@@ -1,5 +1,5 @@
 use crate::context_stack::{BindingKind, ContextMetadata, ControlInfo, LabelKind};
-use crate::early_error_checker::EarlyErrorChecker;
+use crate::early_error_checker::{EarlyErrorBuilder, EarlyErrorChecker};
 use crate::error::{BoxedParseError, ParseError, Result};
 use crate::Token;
 use ast::{
@@ -27,6 +27,7 @@ pub struct AstBuilder<'alloc> {
 pub trait AstBuilderDelegate<'alloc> {
     fn ast_builder_refmut(&mut self) -> &mut AstBuilder<'alloc>;
     fn early_error_refmut(&mut self) -> &mut EarlyErrorBuilder<'alloc>;
+<<<<<<< HEAD
 
     // BindingIdentifier : `yield`
     fn binding_identifier_yield(
@@ -1440,6 +1441,8 @@ pub trait AstBuilderDelegate<'alloc> {
     }
 
     // .. TODO: In between actions to mirror AST Builder
+=======
+>>>>>>> a2be568... error seperation
 }
 
 impl<'alloc> AstBuilder<'alloc> {

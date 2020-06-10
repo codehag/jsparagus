@@ -24,7 +24,8 @@ use ast::{
 };
 use bumpalo;
 use generated_parser::{
-    AstBuilder, StackValue, TerminalId, START_STATE_MODULE, START_STATE_SCRIPT, TABLES,
+    AstBuilder, EarlyErrorBuilder, StackValue, TerminalId, START_STATE_MODULE, START_STATE_SCRIPT,
+    TABLES,
 };
 pub use generated_parser::{ParseError, Result};
 use json_log::json_debug;
@@ -76,7 +77,11 @@ fn parse<'alloc>(
 
     TABLES.check();
 
-    let mut parser = Parser::new(AstBuilder::new(allocator, atoms, slices), start_state);
+    let mut parser = Parser::new(
+        AstBuilder::new(allocator, atoms.clone(), slices),
+        EarlyErrorBuilder::new(atoms.clone()),
+        start_state,
+    );
 
     loop {
         let t = tokens.next(&parser)?;
@@ -96,6 +101,7 @@ pub fn is_partial_script<'alloc>(
 ) -> Result<'alloc, bool> {
     let mut parser = Parser::new(
         AstBuilder::new(allocator, atoms.clone(), slices.clone()),
+        EarlyErrorBuilder::new(atoms.clone()),
         START_STATE_SCRIPT,
     );
     let mut tokens = Lexer::new(allocator, source.chars(), atoms, slices);

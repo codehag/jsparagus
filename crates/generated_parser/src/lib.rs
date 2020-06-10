@@ -16,6 +16,7 @@ extern crate static_assertions;
 
 pub use ast_builder::{AstBuilder, AstBuilderDelegate};
 pub use declaration_kind::DeclarationKind;
+pub use early_error_checker::EarlyErrorBuilder;
 pub use error::{ParseError, Result};
 pub use parser_tables_generated::{
     full_actions, noop_actions, ErrorCode, NonterminalId, ParseTable, ParserTrait, Term, TermValue,

@@ -3,8 +3,8 @@ use crate::simulator::Simulator;
 use ast::arena;
 use ast::SourceLocation;
 use generated_parser::{
-    full_actions, AstBuilder, AstBuilderDelegate, ErrorCode, ParseError, ParserTrait, Result,
-    StackValue, TermValue, TerminalId, Token, TABLES,
+    full_actions, AstBuilder, AstBuilderDelegate, EarlyErrorBuilder, ErrorCode, ParseError,
+    ParserTrait, Result, StackValue, TermValue, TerminalId, Token, TABLES,
 };
 use json_log::json_trace;
 
@@ -17,11 +17,16 @@ pub struct Parser<'alloc> {
     node_stack: QueueStack<TermValue<StackValue<'alloc>>>,
     /// Build the AST stored in the TermValue vectors.
     handler: AstBuilder<'alloc>,
+    /// Track early errors.
+    early_error_handler: EarlyErrorBuilder<'alloc>,
 }
 
 impl<'alloc> AstBuilderDelegate<'alloc> for Parser<'alloc> {
     fn ast_builder_refmut(&mut self) -> &mut AstBuilder<'alloc> {
         &mut self.handler
+    }
+    fn early_error_refmut(&mut self) -> &mut EarlyErrorBuilder<'alloc> {
+        &mut self.early_error_handler
     }
 }
 
@@ -102,7 +107,11 @@ impl<'alloc> ParserTrait<'alloc, StackValue<'alloc>> for Parser<'alloc> {
 }
 
 impl<'alloc> Parser<'alloc> {
-    pub fn new(handler: AstBuilder<'alloc>, entry_state: usize) -> Self {
+    pub fn new(
+        handler: AstBuilder<'alloc>,
+        early_error_handler: EarlyErrorBuilder<'alloc>,
+        entry_state: usize,
+    ) -> Self {
         TABLES.check();
         assert!(entry_state < TABLES.shift_count);
         let mut state_stack = Vec::with_capacity(128);
@@ -112,6 +121,7 @@ impl<'alloc> Parser<'alloc> {
             state_stack,
             node_stack: QueueStack::with_capacity(128),
             handler,
+            early_error_handler,
         }
     }
 
