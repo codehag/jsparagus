@@ -27,8 +27,24 @@ pub struct AstBuilder<'alloc> {
 pub trait AstBuilderDelegate<'alloc> {
     fn ast_builder_refmut(&mut self) -> &mut AstBuilder<'alloc>;
     fn early_error_refmut(&mut self) -> &mut EarlyErrorBuilder<'alloc>;
-<<<<<<< HEAD
 
+    // IdentifierReference : Identifier
+    fn identifier_reference(
+        &self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, Identifier>> {
+        self.early_error_refmut().on_identifier_reference(&token)?;
+        Ok(self.ast_builder_refmut().identifier_reference(token))
+    }
+
+    // BindingIdentifier : Identifier
+    fn binding_identifier(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
+        self.early_error_refmut().on_identifier_reference(&token)?;
+        Ok(self.ast_builder_refmut().binding_identifier(token))
+    }
     // BindingIdentifier : `yield`
     fn binding_identifier_yield(
         &mut self,
@@ -36,6 +52,24 @@ pub trait AstBuilderDelegate<'alloc> {
     ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
         self.early_error_refmut().on_binding_identifier(&token)?;
         Ok(self.ast_builder_refmut().binding_identifier_yield(token))
+    }
+
+    // BindingIdentifier : `await`
+    fn binding_identifier_await(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
+        self.early_error_refmut().on_binding_identifier(&token)?;
+        Ok(self.ast_builder_refmut().binding_identifier_await(token))
+    }
+
+    // LabelIdentifier : Identifier
+    fn label_identifier(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, Label>> {
+        self.early_error_refmut().on_label_identifier(&token)?;
+        Ok(self.ast_builder_refmut().label_identifier(token))
     }
 
     // PrimaryExpression : `this`
@@ -1441,8 +1475,6 @@ pub trait AstBuilderDelegate<'alloc> {
     }
 
     // .. TODO: In between actions to mirror AST Builder
-=======
->>>>>>> a2be568... error seperation
 }
 
 impl<'alloc> AstBuilder<'alloc> {
@@ -1505,67 +1537,62 @@ impl<'alloc> AstBuilder<'alloc> {
     pub fn identifier_reference(
         &self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, Identifier>> {
-        self.on_identifier_reference(&token)?;
-        Ok(self.alloc_with(|| self.identifier(token)))
+    ) -> arena::Box<'alloc, Identifier> {
+        self.alloc_with(|| self.identifier(token))
     }
 
     // BindingIdentifier : Identifier
     pub fn binding_identifier(
         &mut self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
-        self.on_binding_identifier(&token)?;
+    ) -> arena::Box<'alloc, BindingIdentifier> {
         let loc = token.loc;
-        Ok(self.alloc_with(|| BindingIdentifier {
+        self.alloc_with(|| BindingIdentifier {
             name: self.identifier(token),
             loc,
-        }))
+        })
     }
 
     // BindingIdentifier : `yield`
     pub fn binding_identifier_yield(
         &mut self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
-        self.on_binding_identifier(&token)?;
+    ) -> arena::Box<'alloc, BindingIdentifier> {
         let loc = token.loc;
-        Ok(self.alloc_with(|| BindingIdentifier {
+        self.alloc_with(|| BindingIdentifier {
             name: Identifier {
                 value: CommonSourceAtomSetIndices::yield_(),
                 loc,
             },
             loc,
-        }))
+        })
     }
 
     // BindingIdentifier : `await`
     pub fn binding_identifier_await(
         &mut self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
-        self.on_binding_identifier(&token)?;
+    ) -> arena::Box<'alloc, BindingIdentifier> {
         let loc = token.loc;
-        Ok(self.alloc_with(|| BindingIdentifier {
+        self.alloc_with(|| BindingIdentifier {
             name: Identifier {
                 value: CommonSourceAtomSetIndices::await_(),
                 loc,
             },
             loc,
-        }))
+        })
     }
 
     // LabelIdentifier : Identifier
     pub fn label_identifier(
         &mut self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, Label>> {
-        self.on_label_identifier(&token)?;
+    ) -> arena::Box<'alloc, Label> {
         let loc = token.loc;
-        Ok(self.alloc_with(|| Label {
+        self.alloc_with(|| Label {
             value: token.value.as_atom(),
             loc,
-        }))
+        })
     }
 
     // PrimaryExpression : `this`
@@ -2153,14 +2180,14 @@ impl<'alloc> AstBuilder<'alloc> {
     pub fn numeric_literal(
         &self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
         let loc = token.loc;
-        Ok(self.alloc_with(|| {
+        self.alloc_with(|| {
             Expression::LiteralNumericExpression(NumericLiteral {
                 value: Self::numeric_literal_value(token),
                 loc,
             })
-        }))
+        })
     }
 
     // Literal : NumericLiteral
@@ -2480,11 +2507,10 @@ impl<'alloc> AstBuilder<'alloc> {
     pub fn property_name_numeric(
         &self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, PropertyName<'alloc>>> {
+    ) -> arena::Box<'alloc, PropertyName<'alloc>> {
         let loc = token.loc;
         let value = Self::numeric_literal_value(token);
-        Ok(self
-            .alloc_with(|| PropertyName::StaticNumericPropertyName(NumericLiteral { value, loc })))
+        self.alloc_with(|| PropertyName::StaticNumericPropertyName(NumericLiteral { value, loc }))
     }
 
     // LiteralPropertyName : NumericLiteral

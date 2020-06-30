@@ -6,8 +6,10 @@ use crate::declaration_kind::DeclarationKind;
 use crate::early_errors::*;
 use crate::error::{ParseError, Result};
 use crate::Token;
-use ast::arena;
-use ast::source_atom_set::{SourceAtomSet, SourceAtomSetIndex};
+use ast::{
+    arena,
+    source_atom_set::{SourceAtomSet, SourceAtomSetIndex},
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -675,5 +677,53 @@ impl<'alloc> EarlyErrorChecker<'alloc> for EarlyErrorBuilder<'alloc> {
     }
     fn atoms(&self) -> &Rc<RefCell<SourceAtomSet<'alloc>>> {
         &self.atoms
+    }
+}
+
+impl<'alloc> EarlyErrorBuilder<'alloc> {
+
+    // IdentifierReference : Identifier
+    pub fn identifier_reference(
+        &self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.on_identifier_reference(&token)?;
+        Ok(())
+    }
+
+    // BindingIdentifier : Identifier
+    pub fn binding_identifier(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.on_binding_identifier(&token)?;
+        Ok(())
+    }
+
+    // BindingIdentifier : `yield`
+    pub fn binding_identifier_yield(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.on_binding_identifier(&token)?;
+        Ok(())
+    }
+
+    // BindingIdentifier : `await`
+    pub fn binding_identifier_await(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.on_binding_identifier(&token)?;
+        Ok(())
+    }
+
+    // LabelIdentifier : Identifier
+    pub fn label_identifier(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.on_label_identifier(&token)?;
+        Ok(())
     }
 }
