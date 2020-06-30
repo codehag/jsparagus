@@ -1684,17 +1684,16 @@ impl<'alloc> AstBuilder<'alloc> {
     pub fn uncover_parenthesized_expression(
         &self,
         parenthesized: arena::Box<'alloc, CoverParenthesized<'alloc>>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
         match parenthesized.unbox() {
             CoverParenthesized::Expression { expression, .. } => {
                 // TODO - does this need to rewalk the expression to look for
                 // invalid ObjectPattern or ArrayPattern syntax?
-                Ok(expression)
+                expression
             }
-            CoverParenthesized::Parameters(_parameters) => Err(ParseError::NotImplemented(
-                "parenthesized expression with `...` should be a syntax error",
-            )
-            .into()),
+            CoverParenthesized::Parameters(_parameters) => panic!(
+                "parenthesized expression with `...` should be a syntax error"
+            ),
         }
     }
 

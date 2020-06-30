@@ -9,6 +9,7 @@ use crate::Token;
 use ast::{
     arena,
     source_atom_set::{SourceAtomSet, SourceAtomSetIndex},
+    types::*,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -725,5 +726,21 @@ impl<'alloc> EarlyErrorBuilder<'alloc> {
     ) -> Result<'alloc, ()> {
         self.on_label_identifier(&token)?;
         Ok(())
+    }
+
+    // PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList
+    pub fn uncover_parenthesized_expression(
+        &self,
+        parenthesized: arena::Box<'alloc, CoverParenthesized<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        match parenthesized.unbox() {
+            CoverParenthesized::Expression { expression, .. } => {
+                Ok(())
+            }
+            CoverParenthesized::Parameters(_parameters) => Err(ParseError::NotImplemented(
+                "parenthesized expression with `...` should be a syntax error",
+            )
+            .into()),
+        }
     }
 }
