@@ -30,7 +30,7 @@ pub trait AstBuilderDelegate<'alloc> {
 
     // IdentifierReference : Identifier
     fn identifier_reference(
-        &self,
+        &mut self,
         token: arena::Box<'alloc, Token>,
     ) -> Result<'alloc, arena::Box<'alloc, Identifier>> {
         self.early_error_refmut().on_identifier_reference(&token)?;
@@ -129,6 +129,16 @@ pub trait AstBuilderDelegate<'alloc> {
         self.ast_builder_refmut().empty_parameter_list()
     }
 
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `)`
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `...` BindingIdentifier `)`
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `...` BindingPattern `)`
+    fn expression_to_parameter_list(
+        &mut self,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, arena::Vec<'alloc, Parameter<'alloc>>> {
+        // self.early_error_refmut().expression_to_parameter_list(&expression)?;
+        Ok(self.ast_builder_refmut().expression_to_parameter_list(expression)?)
+    }
     // .. TODO: In between actions to mirror AST Builder
 
     // Literal : NullLiteral
@@ -581,6 +591,56 @@ pub trait AstBuilderDelegate<'alloc> {
         self.ast_builder_refmut().arguments_append_spread(arguments, expression)
     }
 
+    // UpdateExpression : LeftHandSideExpression `++`
+    fn post_increment_expr(
+        &mut self,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+        operator_token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        // TODO: remove result
+        self.early_error_refmut().post_increment_expr(&operand, &operator_token)?;
+        Ok(self.ast_builder_refmut().post_increment_expr(operand, operator_token))
+    }
+
+    // UpdateExpression : LeftHandSideExpression `--`
+    fn post_decrement_expr(
+        &mut self,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+        operator_token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        self.early_error_refmut().post_decrement_expr(&operand, &operator_token)?;
+        Ok(self.ast_builder_refmut().post_decrement_expr(operand, operator_token))
+    }
+
+    // UpdateExpression : `++` UnaryExpression
+    fn pre_increment_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        self.early_error_refmut().pre_increment_expr(&operator_token, &operand)?;
+        Ok(self.ast_builder_refmut().pre_increment_expr(operator_token, operand))
+    }
+
+    // UpdateExpression : `--` UnaryExpression
+    fn pre_decrement_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        self.early_error_refmut().pre_decrement_expr(&operator_token, &operand)?;
+        Ok(self.ast_builder_refmut().pre_decrement_expr(operator_token, operand))
+    }
+
+    // UnaryExpression : `delete` UnaryExpression
+    fn delete_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().delete_expr(operator_token, operand)
+    }
+
     // UnaryExpression : `void` UnaryExpression
     fn void_expr(
         &mut self,
@@ -636,7 +696,6 @@ pub trait AstBuilderDelegate<'alloc> {
     }
 
     // .. TODO: In between actions to mirror AST Builder
-
 
     fn equals_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
         self.ast_builder_refmut().equals_op(token)
@@ -855,6 +914,18 @@ pub trait AstBuilderDelegate<'alloc> {
         op: CompoundAssignmentOperator,
     ) -> arena::Box<'alloc, CompoundAssignmentOperator> {
         self.ast_builder_refmut().box_assign_op(op)
+    }
+
+    // AssignmentExpression : LeftHandSideExpression AssignmentOperator AssignmentExpression
+    // AssignmentExpression : LeftHandSideExpression LogicalAssignmentOperator AssignmentExpression
+    fn compound_assignment_expr(
+        &mut self,
+        left_hand_side: arena::Box<'alloc, Expression<'alloc>>,
+        operator: arena::Box<'alloc, CompoundAssignmentOperator>,
+        value: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        self.early_error_refmut().compound_assignment_expr(&left_hand_side, &operator, &value)?;
+        Ok(self.ast_builder_refmut().compound_assignment_expr(left_hand_side, operator, value))
     }
 
     // .. TODO: In between actions to mirror AST Builder
@@ -3026,17 +3097,17 @@ impl<'alloc> AstBuilder<'alloc> {
         &self,
         operand: arena::Box<'alloc, Expression<'alloc>>,
         operator_token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
-        let operand = self.expression_to_simple_assignment_target(operand)?;
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        let operand = self.expression_to_simple_assignment_target(operand);
         let operand_loc = operand.get_loc();
-        Ok(self.alloc_with(|| Expression::UpdateExpression {
+        self.alloc_with(|| Expression::UpdateExpression {
             is_prefix: false,
             operator: UpdateOperator::Increment {
                 loc: operator_token.loc,
             },
             operand,
             loc: SourceLocation::from_parts(operand_loc, operator_token.loc),
-        }))
+        })
     }
 
     // UpdateExpression : LeftHandSideExpression `--`
@@ -3044,17 +3115,17 @@ impl<'alloc> AstBuilder<'alloc> {
         &self,
         operand: arena::Box<'alloc, Expression<'alloc>>,
         operator_token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
-        let operand = self.expression_to_simple_assignment_target(operand)?;
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        let operand = self.expression_to_simple_assignment_target(operand);
         let operand_loc = operand.get_loc();
-        Ok(self.alloc_with(|| Expression::UpdateExpression {
+        self.alloc_with(|| Expression::UpdateExpression {
             is_prefix: false,
             operator: UpdateOperator::Decrement {
                 loc: operator_token.loc,
             },
             operand,
             loc: SourceLocation::from_parts(operand_loc, operator_token.loc),
-        }))
+        })
     }
 
     // UpdateExpression : `++` UnaryExpression
@@ -3062,17 +3133,17 @@ impl<'alloc> AstBuilder<'alloc> {
         &self,
         operator_token: arena::Box<'alloc, Token>,
         operand: arena::Box<'alloc, Expression<'alloc>>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
-        let operand = self.expression_to_simple_assignment_target(operand)?;
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        let operand = self.expression_to_simple_assignment_target(operand);
         let operand_loc = operand.get_loc();
-        Ok(self.alloc_with(|| Expression::UpdateExpression {
+        self.alloc_with(|| Expression::UpdateExpression {
             is_prefix: true,
             operator: UpdateOperator::Increment {
                 loc: operator_token.loc,
             },
             operand,
             loc: SourceLocation::from_parts(operator_token.loc, operand_loc),
-        }))
+        })
     }
 
     // UpdateExpression : `--` UnaryExpression
@@ -3080,17 +3151,17 @@ impl<'alloc> AstBuilder<'alloc> {
         &self,
         operator_token: arena::Box<'alloc, Token>,
         operand: arena::Box<'alloc, Expression<'alloc>>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
-        let operand = self.expression_to_simple_assignment_target(operand)?;
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        let operand = self.expression_to_simple_assignment_target(operand);
         let operand_loc = operand.get_loc();
-        Ok(self.alloc_with(|| Expression::UpdateExpression {
+        self.alloc_with(|| Expression::UpdateExpression {
             is_prefix: true,
             operator: UpdateOperator::Decrement {
                 loc: operator_token.loc,
             },
             operand,
             loc: SourceLocation::from_parts(operator_token.loc, operand_loc),
-        }))
+        })
     }
 
     // UnaryExpression : `delete` UnaryExpression
@@ -3483,6 +3554,7 @@ impl<'alloc> AstBuilder<'alloc> {
                 )
             }
 
+            // TODO: fix this one
             Expression::ObjectExpression(ObjectExpression { properties, loc }) => {
                 AssignmentTarget::AssignmentTargetPattern(
                     AssignmentTargetPattern::ObjectAssignmentTarget(
@@ -3492,7 +3564,7 @@ impl<'alloc> AstBuilder<'alloc> {
             }
 
             other => AssignmentTarget::SimpleAssignmentTarget(
-                self.expression_to_simple_assignment_target(self.alloc_with(|| other))?,
+                self.expression_to_simple_assignment_target(self.alloc_with(|| other)),
             ),
         })
     }
@@ -3500,8 +3572,8 @@ impl<'alloc> AstBuilder<'alloc> {
     fn expression_to_simple_assignment_target(
         &self,
         expression: arena::Box<'alloc, Expression<'alloc>>,
-    ) -> Result<'alloc, SimpleAssignmentTarget<'alloc>> {
-        Ok(match expression.unbox() {
+    ) -> SimpleAssignmentTarget<'alloc> {
+        match expression.unbox() {
             // Static Semantics: AssignmentTargetType
             // https://tc39.es/ecma262/#sec-identifiers-static-semantics-assignmenttargettype
             Expression::IdentifierExpression(IdentifierExpression { name, loc }) => {
@@ -3513,9 +3585,9 @@ impl<'alloc> AstBuilder<'alloc> {
                 if name.value == CommonSourceAtomSetIndices::arguments()
                     || name.value == CommonSourceAtomSetIndices::eval()
                 {
-                    if self.is_strict()? {
-                        return Err(ParseError::InvalidAssignmentTarget.into());
-                    }
+                    // if self.is_strict() {
+                        panic!("Invalid assignment target")
+                    // }
                 }
 
                 // 2. Return simple.
@@ -3582,16 +3654,11 @@ impl<'alloc> AstBuilder<'alloc> {
             //
             // 1. Return simple.
             Expression::CallExpression(CallExpression { .. }) => {
-                return Err(ParseError::NotImplemented(
-                    "Assignment to CallExpression is allowed for non-strict mode.",
-                )
-                .into());
+                panic!("Not Implemented: Assignment to CallExpression is allowed for non-strict mode.")
             }
 
-            _ => {
-                return Err(ParseError::InvalidAssignmentTarget.into());
-            }
-        })
+            _ => panic!("Invalid Assignment Target")
+        }
     }
 
     // AssignmentExpression : LeftHandSideExpression `=` AssignmentExpression
@@ -3698,18 +3765,16 @@ impl<'alloc> AstBuilder<'alloc> {
         left_hand_side: arena::Box<'alloc, Expression<'alloc>>,
         operator: arena::Box<'alloc, CompoundAssignmentOperator>,
         value: arena::Box<'alloc, Expression<'alloc>>,
-    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
-        let target = self.expression_to_simple_assignment_target(left_hand_side)?;
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        let target = self.expression_to_simple_assignment_target(left_hand_side);
         let target_loc = target.get_loc();
         let value_loc = value.get_loc();
-        Ok(
-            self.alloc_with(|| Expression::CompoundAssignmentExpression {
-                operator: operator.unbox(),
-                binding: target,
-                expression: value,
-                loc: SourceLocation::from_parts(target_loc, value_loc),
-            }),
-        )
+        self.alloc_with(|| Expression::CompoundAssignmentExpression {
+            operator: operator.unbox(),
+            binding: target,
+            expression: value,
+            loc: SourceLocation::from_parts(target_loc, value_loc),
+        })
     }
 
     // BlockStatement : Block

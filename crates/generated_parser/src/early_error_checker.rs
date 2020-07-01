@@ -728,19 +728,88 @@ impl<'alloc> EarlyErrorBuilder<'alloc> {
         Ok(())
     }
 
-    // PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList
-    pub fn uncover_parenthesized_expression(
+    // UpdateExpression : LeftHandSideExpression `++`
+    pub fn post_increment_expr(
         &self,
-        parenthesized: arena::Box<'alloc, CoverParenthesized<'alloc>>,
+        operand: &arena::Box<'alloc, Expression<'alloc>>,
+        _operator_token: &arena::Box<'alloc, Token>,
     ) -> Result<'alloc, ()> {
-        match parenthesized.unbox() {
-            CoverParenthesized::Expression { expression, .. } => {
-                Ok(())
+        self.expression_to_simple_assignment_target2(&*operand)?;
+        Ok(())
+    }
+
+    // UpdateExpression : LeftHandSideExpression `--`
+    pub fn post_decrement_expr(
+        &self,
+        operand: &arena::Box<'alloc, Expression<'alloc>>,
+        _operator_token: &arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        self.expression_to_simple_assignment_target2(&*operand)?;
+        Ok(())
+    }
+
+    // UpdateExpression : `++` UnaryExpression
+    pub fn pre_increment_expr(
+        &self,
+        _operator_token: &arena::Box<'alloc, Token>,
+        operand: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        self.expression_to_simple_assignment_target2(&*operand)?;
+        Ok(())
+    }
+
+    // UpdateExpression : `--` UnaryExpression
+    pub fn pre_decrement_expr(
+        &self,
+        _operator_token: &arena::Box<'alloc, Token>,
+        operand: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        self.expression_to_simple_assignment_target2(&*operand)?;
+        Ok(())
+    }
+
+    fn expression_to_simple_assignment_target2(
+        &self,
+        expression: &Expression<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match expression {
+            // Static Semantics: AssignmentTargetType
+            // https://tc39.es/ecma262/#sec-identifiers-static-semantics-assignmenttargettype
+            Expression::IdentifierExpression(_) |
+            Expression::MemberExpression(MemberExpression::StaticMemberExpression(_)) |
+            Expression::MemberExpression(MemberExpression::ComputedMemberExpression(_)) => Ok(()),
+
+            // Static Semantics: AssignmentTargetType
+            // https://tc39.es/ecma262/#sec-static-semantics-static-semantics-assignmenttargettype
+            //
+            // CallExpression :
+            //   CallExpression [ Expression ]
+            //   CallExpression . IdentifierName
+            //
+            // 1. Return simple.
+            Expression::CallExpression(CallExpression { .. }) => {
+                return Err(ParseError::NotImplemented(
+                    "Assignment to CallExpression is allowed for non-strict mode.",
+                )
+                .into());
             }
-            CoverParenthesized::Parameters(_parameters) => Err(ParseError::NotImplemented(
-                "parenthesized expression with `...` should be a syntax error",
-            )
-            .into()),
+
+            _ => {
+                return Err(ParseError::InvalidAssignmentTarget.into());
+            }
         }
     }
+
+    // AssignmentExpression : LeftHandSideExpression AssignmentOperator AssignmentExpression
+    // AssignmentExpression : LeftHandSideExpression LogicalAssignmentOperator AssignmentExpression
+    pub fn compound_assignment_expr(
+        &self,
+        left_hand_side: &arena::Box<'alloc, Expression<'alloc>>,
+        _operator: &arena::Box<'alloc, CompoundAssignmentOperator>,
+        _value: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        self.expression_to_simple_assignment_target2(&*left_hand_side)?;
+        Ok(())
+    }
+
 }
