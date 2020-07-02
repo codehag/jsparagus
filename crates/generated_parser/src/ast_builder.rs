@@ -26,6 +26,1420 @@ pub struct AstBuilder<'alloc> {
 
 pub trait AstBuilderDelegate<'alloc> {
     fn ast_builder_refmut(&mut self) -> &mut AstBuilder<'alloc>;
+    fn early_error_refmut(&mut self) -> &mut EarlyErrorBuilder<'alloc>;
+
+    // BindingIdentifier : `yield`
+    fn binding_identifier_yield(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, BindingIdentifier>> {
+        self.early_error_refmut().on_binding_identifier(&token)?;
+        Ok(self.ast_builder_refmut().binding_identifier_yield(token))
+    }
+
+    // PrimaryExpression : `this`
+    fn this_expr(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().this_expr(token)
+    }
+
+    // PrimaryExpression : IdentifierReference
+    fn identifier_expr(
+        &mut self,
+        name: arena::Box<'alloc, Identifier>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().identifier_expr(name)
+    }
+
+    // PrimaryExpression : RegularExpressionLiteral
+    fn regexp_literal(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().regexp_literal(token)
+    }
+
+    // PrimaryExpression : TemplateLiteral
+    fn untagged_template_expr(
+        &mut self,
+        template_literal: arena::Box<'alloc, TemplateExpression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().untagged_template_expr(template_literal)
+    }
+
+    // PrimaryExpression : CoverParenthesizedExpressionAndArrowParameterList
+    fn uncover_parenthesized_expression(
+        &mut self,
+        parenthesized: arena::Box<'alloc, CoverParenthesized<'alloc>>,
+    ) -> Result<'alloc, arena::Box<'alloc, Expression<'alloc>>> {
+        // TODO May need to remain a result.
+        // self.early_error_refmut().uncover_parenthesized_expression(&parenthesized)?;
+        Ok(self.ast_builder_refmut().uncover_parenthesized_expression(parenthesized))
+    }
+
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `)`
+    fn cover_parenthesized_expression(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, CoverParenthesized<'alloc>> {
+        self.ast_builder_refmut().cover_parenthesized_expression(open_token, expression, close_token)
+    }
+
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` `)`
+    fn empty_parameter_list(&mut self) -> arena::Vec<'alloc, Parameter<'alloc>> {
+        self.ast_builder_refmut().empty_parameter_list()
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // Literal : NullLiteral
+    fn null_literal(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().null_literal(token)
+    }
+
+    // Literal : BooleanLiteral
+    fn boolean_literal(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().boolean_literal(token)
+    }
+
+    // Literal : NumericLiteral
+    fn numeric_literal(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().numeric_literal(token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ArrayLiteral : `[` Elision? `]`
+    fn array_literal_empty(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().array_literal_empty(open_token, elision, close_token)
+    }
+
+    // ArrayLiteral : `[` ElementList `]`
+    fn array_literal(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        array: arena::Box<'alloc, ArrayExpression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().array_literal(open_token, array, close_token)
+    }
+
+    // ArrayLiteral : `[` ElementList `,` Elision? `]`
+    fn array_literal_with_trailing_elision(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        array: arena::Box<'alloc, ArrayExpression<'alloc>>,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().array_literal_with_trailing_elision(open_token, array, elision, close_token)
+    }
+
+    // ElementList : Elision? AssignmentExpression
+    fn element_list_first(
+        &mut self,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        element: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().element_list_first(elision, element)
+    }
+
+    // ElementList : Elision? SpreadElement
+    fn element_list_first_spread(
+        &mut self,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        spread_element: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().element_list_first_spread(elision, spread_element)
+    }
+
+    // ElementList : ElementList `,` Elision? AssignmentExpression
+    fn element_list_append(
+        &mut self,
+        array: arena::Box<'alloc, ArrayExpression<'alloc>>,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        element: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().element_list_append(array, elision, element)
+    }
+
+    // ElementList : ElementList `,` Elision? SpreadElement
+    fn element_list_append_spread(
+        &mut self,
+        array: arena::Box<'alloc, ArrayExpression<'alloc>>,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        spread_element: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().element_list_append_spread(array, elision, spread_element)
+    }
+
+    // Elision : `,`
+    fn elision_single(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().elision_single(token)
+    }
+
+    // Elision : Elision `,`
+    fn elision_append(
+        &mut self,
+        array: arena::Box<'alloc, ArrayExpression<'alloc>>,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, ArrayExpression<'alloc>> {
+        self.ast_builder_refmut().elision_append(array, token)
+    }
+
+    // SpreadElement : `...` AssignmentExpression
+    fn spread_element(
+        &mut self,
+        expr: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().spread_element(expr)
+    }
+
+    // ObjectLiteral : `{` `}`
+    fn object_literal_empty(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().object_literal_empty(open_token, close_token)
+    }
+
+    // ObjectLiteral : `{` PropertyDefinitionList `}`
+    // ObjectLiteral : `{` PropertyDefinitionList `,` `}`
+    fn object_literal(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        object: arena::Box<'alloc, ObjectExpression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().object_literal(open_token, object, close_token)
+    }
+
+    // PropertyDefinitionList : PropertyDefinition
+    fn property_definition_list_single(
+        &mut self,
+        property: arena::Box<'alloc, ObjectProperty<'alloc>>,
+    ) -> arena::Box<'alloc, ObjectExpression<'alloc>> {
+        self.ast_builder_refmut().property_definition_list_single(property)
+    }
+
+    // PropertyDefinitionList : PropertyDefinitionList `,` PropertyDefinition
+    fn property_definition_list_append(
+        &mut self,
+        object: arena::Box<'alloc, ObjectExpression<'alloc>>,
+        property: arena::Box<'alloc, ObjectProperty<'alloc>>,
+    ) -> arena::Box<'alloc, ObjectExpression<'alloc>> {
+        self.ast_builder_refmut().property_definition_list_append(object, property)
+    }
+
+    // PropertyDefinition : IdentifierReference
+    fn shorthand_property(
+        &mut self,
+        name: arena::Box<'alloc, Identifier>,
+    ) -> arena::Box<'alloc, ObjectProperty<'alloc>> {
+        self.ast_builder_refmut().shorthand_property(name)
+    }
+
+    // PropertyDefinition : PropertyName `:` AssignmentExpression
+    fn property_definition(
+        &mut self,
+        name: arena::Box<'alloc, PropertyName<'alloc>>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ObjectProperty<'alloc>> {
+        self.ast_builder_refmut().property_definition(name, expression)
+    }
+
+    // PropertyDefinition : MethodDefinition
+    fn property_definition_method(
+        &mut self,
+        method: arena::Box<'alloc, MethodDefinition<'alloc>>,
+    ) -> arena::Box<'alloc, ObjectProperty<'alloc>> {
+        self.ast_builder_refmut().property_definition_method(method)
+    }
+
+    // PropertyDefinition : `...` AssignmentExpression
+    fn property_definition_spread(
+        &mut self,
+        spread: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ObjectProperty<'alloc>> {
+        self.ast_builder_refmut().property_definition_spread(spread)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // LiteralPropertyName : NumericLiteral
+    fn property_name_numeric(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, PropertyName<'alloc>> {
+        self.ast_builder_refmut().property_name_numeric(token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // TemplateLiteral : NoSubstitutionTemplate
+    fn template_literal(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, TemplateExpression<'alloc>> {
+        self.ast_builder_refmut().template_literal(token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // MemberExpression : MemberExpression `[` Expression `]`
+    // CallExpression : CallExpression `[` Expression `]`
+    fn computed_member_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().computed_member_expr(object, expression, close_token)
+    }
+
+    // OptionalExpression : MemberExpression OptionalChain
+    // OptionalExpression : CallExpression OptionalChain
+    // OptionalExpression : OptionalExpression OptionalChain
+    fn optional_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        tail: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_expr(object, tail)
+    }
+
+    // OptionalChain : `?.` `[` Expression `]`
+    fn optional_computed_member_expr_tail(
+        &mut self,
+        start_token: arena::Box<'alloc, Token>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_computed_member_expr_tail(start_token, expression, close_token)
+    }
+
+    // OptionalChain : `?.` Expression
+    fn optional_static_member_expr_tail(
+        &mut self,
+        start_token: arena::Box<'alloc, Token>,
+        identifier_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_static_member_expr_tail(start_token, identifier_token)
+    }
+
+    // OptionalChain : `?.` Arguments
+    fn optional_call_expr_tail(
+        &mut self,
+        start_token: arena::Box<'alloc, Token>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_call_expr_tail(start_token, arguments)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // OptionalChain : OptionalChain `[` Expression `]`
+    fn optional_computed_member_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_computed_member_expr(object, expression, close_token)
+    }
+
+    // OptionalChain : OptionalChain `.` Expression
+    fn optional_static_member_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        identifier_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_static_member_expr(object, identifier_token)
+    }
+
+    // OptionalChain : OptionalChain Arguments
+    fn optional_call_expr(
+        &mut self,
+        callee: arena::Box<'alloc, Expression<'alloc>>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().optional_call_expr(callee, arguments)
+    }
+
+    // MemberExpression : MemberExpression `.` IdentifierName
+    // CallExpression : CallExpression `.` IdentifierName
+    fn static_member_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        identifier_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().static_member_expr(object, identifier_token)
+    }
+
+    // MemberExpression : MemberExpression TemplateLiteral
+    // CallExpression : CallExpression TemplateLiteral
+    fn tagged_template_expr(
+        &mut self,
+        tag: arena::Box<'alloc, Expression<'alloc>>,
+        template_literal: arena::Box<'alloc, TemplateExpression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().tagged_template_expr(tag, template_literal)
+    }
+
+    // MemberExpression : `new` MemberExpression Arguments
+    fn new_expr_with_arguments(
+        &mut self,
+        new_token: arena::Box<'alloc, Token>,
+        callee: arena::Box<'alloc, Expression<'alloc>>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().new_expr_with_arguments(new_token, callee, arguments)
+    }
+
+    // MemberExpression : MemberExpression `.` PrivateIdentifier
+    fn private_field_expr(
+        &mut self,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        private_identifier: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().private_field_expr(object, private_identifier)
+    }
+
+    // SuperProperty : `super` `[` Expression `]`
+    fn super_property_computed(
+        &mut self,
+        super_token: arena::Box<'alloc, Token>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().super_property_computed(super_token, expression, close_token)
+    }
+
+    // SuperProperty : `super` `.` IdentifierName
+    fn super_property_static(
+        &mut self,
+        super_token: arena::Box<'alloc, Token>,
+        identifier_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().super_property_static(super_token, identifier_token)
+    }
+
+    // NewTarget : `new` `.` `target`
+    fn new_target_expr(
+        &mut self,
+        new_token: arena::Box<'alloc, Token>,
+        target_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().new_target_expr(new_token, target_token)
+    }
+
+    // NewExpression : `new` NewExpression
+    fn new_expr_without_arguments(
+        &mut self,
+        new_token: arena::Box<'alloc, Token>,
+        callee: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().new_expr_without_arguments(new_token, callee)
+    }
+
+    // CallExpression : CallExpression Arguments
+    // CoverCallExpressionAndAsyncArrowHead : MemberExpression Arguments
+    // CallMemberExpression : MemberExpression Arguments
+    fn call_expr(
+        &mut self,
+        callee: arena::Box<'alloc, Expression<'alloc>>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().call_expr(callee, arguments)
+    }
+
+    // SuperCall : `super` Arguments
+    fn super_call(
+        &mut self,
+        super_token: arena::Box<'alloc, Token>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().super_call(super_token, arguments)
+    }
+
+    // ImportCall : `import` `(` AssignmentExpression `)`
+    fn import_call(
+        &mut self,
+        import_token: arena::Box<'alloc, Token>,
+        argument: arena::Box<'alloc, Expression<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().import_call(import_token, argument, close_token)
+    }
+
+    // Arguments : `(` `)`
+    fn arguments_empty(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments_empty(open_token, close_token)
+    }
+
+    fn arguments_single(
+        &mut self,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments_single(expression)
+    }
+
+    fn arguments_spread_single(
+        &mut self,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments_spread_single(expression)
+    }
+
+    fn arguments(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments(open_token, arguments, close_token)
+    }
+
+    // ArgumentList : AssignmentExpression
+    // ArgumentList : ArgumentList `,` AssignmentExpression
+    fn arguments_append(
+        &mut self,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments_append(arguments, expression)
+    }
+
+    // ArgumentList : `...` AssignmentExpression
+    // ArgumentList : ArgumentList `,` `...` AssignmentExpression
+    fn arguments_append_spread(
+        &mut self,
+        arguments: arena::Box<'alloc, Arguments<'alloc>>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Arguments<'alloc>> {
+        self.ast_builder_refmut().arguments_append_spread(arguments, expression)
+    }
+
+    // UnaryExpression : `void` UnaryExpression
+    fn void_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().void_expr(operator_token, operand)
+    }
+
+    // UnaryExpression : `typeof` UnaryExpression
+    fn typeof_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().typeof_expr(operator_token, operand)
+    }
+
+    // UnaryExpression : `+` UnaryExpression
+    fn unary_plus_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().unary_plus_expr(operator_token, operand)
+    }
+
+    // UnaryExpression : `-` UnaryExpression
+    fn unary_minus_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().unary_minus_expr(operator_token, operand)
+    }
+
+    // UnaryExpression : `~` UnaryExpression
+    fn bitwise_not_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().bitwise_not_expr(operator_token, operand)
+    }
+
+    // UnaryExpression : `!` UnaryExpression
+    fn logical_not_expr(
+        &mut self,
+        operator_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().logical_not_expr(operator_token, operand)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+
+    fn equals_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().equals_op(token)
+    }
+    fn not_equals_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().not_equals_op(token)
+    }
+    fn strict_equals_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().strict_equals_op(token)
+    }
+    fn strict_not_equals_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().strict_not_equals_op(token)
+    }
+    fn less_than_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().less_than_op(token)
+    }
+    fn less_than_or_equal_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().less_than_or_equal_op(token)
+    }
+    fn greater_than_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().greater_than_op(token)
+    }
+    fn greater_than_or_equal_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().greater_than_or_equal_op(token)
+    }
+    fn in_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().in_op(token)
+    }
+    fn instanceof_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().instanceof_op(token)
+    }
+    fn left_shift_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().left_shift_op(token)
+    }
+    fn right_shift_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().right_shift_op(token)
+    }
+    fn right_shift_ext_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().right_shift_ext_op(token)
+    }
+    fn add_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().add_op(token)
+    }
+    fn sub_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().sub_op(token)
+    }
+    fn mul_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().mul_op(token)
+    }
+    fn div_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().div_op(token)
+    }
+    fn mod_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().mod_op(token)
+    }
+    fn pow_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().pow_op(token)
+    }
+    fn comma_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().comma_op(token)
+    }
+    fn coalesce_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().coalesce_op(token)
+    }
+    fn logical_or_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().logical_or_op(token)
+    }
+    fn logical_and_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().logical_and_op(token)
+    }
+    fn bitwise_or_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().bitwise_or_op(token)
+    }
+    fn bitwise_xor_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().bitwise_xor_op(token)
+    }
+    fn bitwise_and_op(&mut self, token: arena::Box<'alloc, Token>) -> BinaryOperator {
+        self.ast_builder_refmut().bitwise_and_op(token)
+    }
+
+    // Due to limitations of the current parser generator,
+    // MultiplicativeOperators and CompoundAssignmentOperators currently get
+    // boxed.
+    fn box_op(&mut self, op: BinaryOperator) -> arena::Box<'alloc, BinaryOperator> {
+        self.ast_builder_refmut().box_op(op)
+    }
+
+    // MultiplicativeExpression : MultiplicativeExpression MultiplicativeOperator ExponentiationExpression
+    fn multiplicative_expr(
+        &mut self,
+        left: arena::Box<'alloc, Expression<'alloc>>,
+        operator: arena::Box<'alloc, BinaryOperator>,
+        right: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().multiplicative_expr(left, operator, right)
+    }
+
+    // ExponentiationExpression : UpdateExpression `**` ExponentiationExpression
+    // AdditiveExpression : AdditiveExpression `+` MultiplicativeExpression
+    // AdditiveExpression : AdditiveExpression `-` MultiplicativeExpression
+    // ShiftExpression : ShiftExpression `<<` AdditiveExpression
+    // ShiftExpression : ShiftExpression `>>` AdditiveExpression
+    // ShiftExpression : ShiftExpression `>>>` AdditiveExpression
+    // RelationalExpression : RelationalExpression `<` ShiftExpression
+    // RelationalExpression : RelationalExpression `>` ShiftExpression
+    // RelationalExpression : RelationalExpression `<=` ShiftExpression
+    // RelationalExpression : RelationalExpression `>=` ShiftExpression
+    // RelationalExpression : RelationalExpression `instanceof` ShiftExpression
+    // RelationalExpression : [+In] RelationalExpression `in` ShiftExpression
+    // EqualityExpression : EqualityExpression `==` RelationalExpression
+    // EqualityExpression : EqualityExpression `!=` RelationalExpression
+    // EqualityExpression : EqualityExpression `===` RelationalExpression
+    // EqualityExpression : EqualityExpression `!==` RelationalExpression
+    // BitwiseANDExpression : BitwiseANDExpression `&` EqualityExpression
+    // BitwiseXORExpression : BitwiseXORExpression `^` BitwiseANDExpression
+    // BitwiseORExpression : BitwiseORExpression `|` BitwiseXORExpression
+    // LogicalANDExpression : LogicalANDExpression `&&` BitwiseORExpression
+    // LogicalORExpression : LogicalORExpression `||` LogicalANDExpression
+    fn binary_expr(
+        &mut self,
+        operator: BinaryOperator,
+        left: arena::Box<'alloc, Expression<'alloc>>,
+        right: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().binary_expr(operator, left, right)
+    }
+
+    // ConditionalExpression : LogicalORExpression `?` AssignmentExpression `:` AssignmentExpression
+    fn conditional_expr(
+        &mut self,
+        test: arena::Box<'alloc, Expression<'alloc>>,
+        consequent: arena::Box<'alloc, Expression<'alloc>>,
+        alternate: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().conditional_expr(test, consequent, alternate)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    fn add_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().add_assign_op(token)
+    }
+    fn sub_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().sub_assign_op(token)
+    }
+    fn mul_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().mul_assign_op(token)
+    }
+    fn div_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().div_assign_op(token)
+    }
+    fn mod_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().mod_assign_op(token)
+    }
+    fn pow_assign_op(&mut self, token: arena::Box<'alloc, Token>) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().pow_assign_op(token)
+    }
+    fn left_shift_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().left_shift_assign_op(token)
+    }
+    fn right_shift_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().right_shift_assign_op(token)
+    }
+    fn right_shift_ext_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().right_shift_ext_assign_op(token)
+    }
+    fn bitwise_or_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().bitwise_or_assign_op(token)
+    }
+    fn bitwise_xor_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().bitwise_xor_assign_op(token)
+    }
+    fn bitwise_and_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().bitwise_and_assign_op(token)
+    }
+
+    fn logical_or_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().logical_or_assign_op(token)
+    }
+    fn logical_and_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().logical_and_assign_op(token)
+    }
+    fn coalesce_assign_op(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> CompoundAssignmentOperator {
+        self.ast_builder_refmut().coalesce_assign_op(token)
+    }
+
+    fn box_assign_op(
+        &mut self,
+        op: CompoundAssignmentOperator,
+    ) -> arena::Box<'alloc, CompoundAssignmentOperator> {
+        self.ast_builder_refmut().box_assign_op(op)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // Block : `{` StatementList? `}`
+    // for Catch
+    fn catch_block(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        statements: Option<arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Block<'alloc>> {
+        self.ast_builder_refmut().catch_block(open_token, statements, close_token)
+    }
+
+    // StatementList : StatementListItem
+    fn statement_list_single(
+        &mut self,
+        statement: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>> {
+        self.ast_builder_refmut().statement_list_single(statement)
+    }
+
+    // StatementList : StatementList StatementListItem
+    fn statement_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>,
+        statement: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>> {
+        self.ast_builder_refmut().statement_list_append(list, statement)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // LetOrConst : `let`
+    fn let_kind(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, VariableDeclarationKind> {
+        self.ast_builder_refmut().let_kind(token)
+    }
+
+    // LetOrConst : `const`
+    fn const_kind(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, VariableDeclarationKind> {
+        self.ast_builder_refmut().const_kind(token)
+    }
+
+    // VariableStatement : `var` VariableDeclarationList `;`
+    fn variable_statement(
+        &mut self,
+        var_token: arena::Box<'alloc, Token>,
+        declarators: arena::Box<'alloc, arena::Vec<'alloc, VariableDeclarator<'alloc>>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().variable_statement(var_token, declarators)
+    }
+
+    // VariableDeclarationList : VariableDeclaration
+    // BindingList : LexicalBinding
+    fn variable_declaration_list_single(
+        &mut self,
+        decl: arena::Box<'alloc, VariableDeclarator<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, VariableDeclarator<'alloc>>> {
+        self.ast_builder_refmut().variable_declaration_list_single(decl)
+    }
+
+    // VariableDeclarationList : VariableDeclarationList `,` VariableDeclaration
+    // BindingList : BindingList `,` LexicalBinding
+    fn variable_declaration_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, VariableDeclarator<'alloc>>>,
+        decl: arena::Box<'alloc, VariableDeclarator<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, VariableDeclarator<'alloc>>> {
+        self.ast_builder_refmut().variable_declaration_list_append(list, decl)
+    }
+
+    // VariableDeclaration : BindingIdentifier Initializer?
+    // VariableDeclaration : BindingPattern Initializer
+    fn variable_declaration(
+        &mut self,
+        binding: arena::Box<'alloc, Binding<'alloc>>,
+        init: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, VariableDeclarator<'alloc>> {
+        self.ast_builder_refmut().variable_declaration(binding, init)
+    }
+
+    // ObjectBindingPattern : `{` `}`
+    // ObjectBindingPattern : `{` BindingRestProperty `}`
+    // ObjectBindingPattern : `{` BindingPropertyList `}`
+    // ObjectBindingPattern : `{` BindingPropertyList `,` BindingRestProperty? `}`
+    fn object_binding_pattern(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        properties: arena::Box<'alloc, arena::Vec<'alloc, BindingProperty<'alloc>>>,
+        rest: Option<arena::Box<'alloc, BindingIdentifier>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Binding<'alloc>> {
+        self.ast_builder_refmut().object_binding_pattern(open_token, properties, rest, close_token)
+    }
+
+    fn binding_element_list_empty(
+        &mut self,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>> {
+        self.ast_builder_refmut().binding_element_list_empty()
+    }
+
+    // ArrayBindingPattern : `[` Elision? BindingRestElement? `]`
+    // ArrayBindingPattern : `[` BindingElementList `]`
+    // ArrayBindingPattern : `[` BindingElementList `,` Elision? BindingRestElement? `]`
+    fn array_binding_pattern(
+        &mut self,
+        open_token: arena::Box<'alloc, Token>,
+        elements: arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>>,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        rest: Option<arena::Box<'alloc, Binding<'alloc>>>,
+        close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Binding<'alloc>> {
+        self.ast_builder_refmut().array_binding_pattern(open_token, elements, elision, rest, close_token)
+    }
+
+    fn binding_property_list_empty(
+        &mut self,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, BindingProperty<'alloc>>> {
+        self.ast_builder_refmut().binding_property_list_empty()
+    }
+
+    // BindingPropertyList : BindingProperty
+    fn binding_property_list_single(
+        &mut self,
+        property: arena::Box<'alloc, BindingProperty<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, BindingProperty<'alloc>>> {
+        self.ast_builder_refmut().binding_property_list_single(property)
+    }
+
+    // BindingPropertyList : BindingPropertyList `,` BindingProperty
+    fn binding_property_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, BindingProperty<'alloc>>>,
+        property: arena::Box<'alloc, BindingProperty<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, BindingProperty<'alloc>>> {
+        self.ast_builder_refmut().binding_property_list_append(list, property)
+    }
+
+    // BindingElementList : BindingElementList `,` BindingElisionElement
+    fn binding_element_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>>,
+        element: arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>> {
+        self.ast_builder_refmut().binding_element_list_append(list, element)
+    }
+
+    // BindingElisionElement : Elision? BindingElement
+    fn binding_elision_element(
+        &mut self,
+        elision: Option<arena::Box<'alloc, ArrayExpression<'alloc>>>,
+        element: arena::Box<'alloc, Parameter<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Option<Parameter<'alloc>>>> {
+        self.ast_builder_refmut().binding_elision_element(elision, element)
+    }
+
+    // BindingProperty : SingleNameBinding
+    fn binding_property_shorthand(
+        &mut self,
+        binding: arena::Box<'alloc, Parameter<'alloc>>,
+    ) -> arena::Box<'alloc, BindingProperty<'alloc>> {
+        self.ast_builder_refmut().binding_property_shorthand(binding)
+    }
+
+    // BindingProperty : PropertyName `:` BindingElement
+    fn binding_property(
+        &mut self,
+        name: arena::Box<'alloc, PropertyName<'alloc>>,
+        binding: arena::Box<'alloc, Parameter<'alloc>>,
+    ) -> arena::Box<'alloc, BindingProperty<'alloc>> {
+        self.ast_builder_refmut().binding_property(name, binding)
+    }
+
+    // BindingElement : BindingPattern Initializer?
+    fn binding_element_pattern(
+        &mut self,
+        binding: arena::Box<'alloc, Binding<'alloc>>,
+        init: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, Parameter<'alloc>> {
+        self.ast_builder_refmut().binding_element_pattern(binding, init)
+    }
+
+    // SingleNameBinding : BindingIdentifier Initializer?
+    fn single_name_binding(
+        &mut self,
+        name: arena::Box<'alloc, BindingIdentifier>,
+        init: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, Parameter<'alloc>> {
+        self.ast_builder_refmut().single_name_binding(name, init)
+    }
+
+    // BindingRestElement : `...` BindingIdentifier
+    fn binding_rest_element(
+        &mut self,
+        name: arena::Box<'alloc, BindingIdentifier>,
+    ) -> arena::Box<'alloc, Binding<'alloc>> {
+        self.ast_builder_refmut().binding_rest_element(name)
+    }
+
+    // EmptyStatement : `;`
+    fn empty_statement(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().empty_statement(token)
+    }
+
+    // ExpressionStatement : [lookahead not in {'{', 'function', 'async', 'class', 'let'}] Expression `;`
+    fn expression_statement(
+        &mut self,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().expression_statement(expression)
+    }
+
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    fn for_expression(
+        &mut self,
+        expr: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> Option<VariableDeclarationOrExpression<'alloc>> {
+        self.ast_builder_refmut().for_expression(expr)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    fn unbox_for_lexical_declaration(
+        &mut self,
+        declaration: arena::Box<'alloc, VariableDeclarationOrExpression<'alloc>>,
+    ) -> VariableDeclarationOrExpression<'alloc> {
+        self.ast_builder_refmut().unbox_for_lexical_declaration(declaration)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    fn unbox_for_declaration(
+        &mut self,
+        declaration: arena::Box<'alloc, VariableDeclarationOrAssignmentTarget<'alloc>>,
+    ) -> VariableDeclarationOrAssignmentTarget<'alloc> {
+        self.ast_builder_refmut().unbox_for_declaration(declaration)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // CatchParameter : BindingIdentifier
+    // ForBinding : BindingIdentifier
+    // LexicalBinding : BindingIdentifier Initializer?
+    // VariableDeclaration : BindingIdentifier Initializer?
+    fn binding_identifier_to_binding(
+        &mut self,
+        identifier: arena::Box<'alloc, BindingIdentifier>,
+    ) -> arena::Box<'alloc, Binding<'alloc>> {
+        self.ast_builder_refmut().binding_identifier_to_binding(identifier)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ReturnStatement : `return` `;`
+    // ReturnStatement : `return` Expression `;`
+    fn return_statement(
+        &mut self,
+        return_token: arena::Box<'alloc, Token>,
+        expression: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().return_statement(return_token, expression)
+    }
+
+    // WithStatement : `with` `(` Expression `)` Statement
+    fn with_statement(
+        &mut self,
+        with_token: arena::Box<'alloc, Token>,
+        object: arena::Box<'alloc, Expression<'alloc>>,
+        body: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().with_statement(with_token, object, body)
+    }
+
+    // SwitchStatement : `switch` `(` Expression `)` CaseBlock
+    fn switch_statement(
+        &mut self,
+        switch_token: arena::Box<'alloc, Token>,
+        discriminant_expr: arena::Box<'alloc, Expression<'alloc>>,
+        cases: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().switch_statement(switch_token, discriminant_expr, cases)
+    }
+
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // CaseClauses : CaseClause
+    fn case_clauses_single(
+        &mut self,
+        case: arena::Box<'alloc, SwitchCase<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, SwitchCase<'alloc>>> {
+        self.ast_builder_refmut().case_clauses_single(case)
+    }
+
+    // CaseClauses : CaseClauses CaseClause
+    fn case_clauses_append(
+        &mut self,
+        cases: arena::Box<'alloc, arena::Vec<'alloc, SwitchCase<'alloc>>>,
+        case: arena::Box<'alloc, SwitchCase<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, SwitchCase<'alloc>>> {
+        self.ast_builder_refmut().case_clauses_append(cases, case)
+    }
+
+    // CaseClause : `case` Expression `:` StatementList
+    fn case_clause(
+        &mut self,
+        case_token: arena::Box<'alloc, Token>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+        colon_token: arena::Box<'alloc, Token>,
+        statements: Option<arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>>,
+    ) -> arena::Box<'alloc, SwitchCase<'alloc>> {
+        self.ast_builder_refmut().case_clause(case_token, expression, colon_token, statements)
+    }
+
+    // DefaultClause : `default` `:` StatementList
+    fn default_clause(
+        &mut self,
+        default_token: arena::Box<'alloc, Token>,
+        colon_token: arena::Box<'alloc, Token>,
+        statements: Option<arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>>,
+    ) -> arena::Box<'alloc, SwitchDefault<'alloc>> {
+        self.ast_builder_refmut().default_clause(default_token, colon_token, statements)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ThrowStatement : `throw` Expression `;`
+    fn throw_statement(
+        &mut self,
+        throw_token: arena::Box<'alloc, Token>,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().throw_statement(throw_token, expression)
+    }
+
+    // TryStatement : `try` Block Catch
+    // TryStatement : `try` Block Finally
+    // TryStatement : `try` Block Catch Finally
+    fn try_statement(
+        &mut self,
+        try_token: arena::Box<'alloc, Token>,
+        body: arena::Box<'alloc, Block<'alloc>>,
+        catch_clause: Option<arena::Box<'alloc, CatchClause<'alloc>>>,
+        finally_block: Option<arena::Box<'alloc, Block<'alloc>>>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().try_statement(try_token, body, catch_clause, finally_block)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // DebuggerStatement : `debugger` `;`
+    fn debugger_statement(
+        &mut self,
+        token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, Statement<'alloc>> {
+        self.ast_builder_refmut().debugger_statement(token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // UniqueFormalParameters : FormalParameters
+    fn unique_formal_parameters(
+        &mut self,
+        parameters: arena::Box<'alloc, FormalParameters<'alloc>>,
+    ) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().unique_formal_parameters(parameters)
+    }
+
+    // FormalParameters : [empty]
+    fn empty_formal_parameters(&mut self) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().empty_formal_parameters()
+    }
+
+    // FormalParameters : FunctionRestParameter
+    // FormalParameters : FormalParameterList `,` FunctionRestParameter
+    fn with_rest_parameter(
+        &mut self,
+        params: arena::Box<'alloc, FormalParameters<'alloc>>,
+        rest: arena::Box<'alloc, Binding<'alloc>>,
+    ) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().with_rest_parameter(params, rest)
+    }
+
+    // FormalParameterList : FormalParameter
+    fn formal_parameter_list_single(
+        &mut self,
+        parameter: arena::Box<'alloc, Parameter<'alloc>>,
+    ) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().formal_parameter_list_single(parameter)
+    }
+
+    // FormalParameterList : FormalParameterList "," FormalParameter
+    fn formal_parameter_list_append(
+        &mut self,
+        params: arena::Box<'alloc, FormalParameters<'alloc>>,
+        next_param: arena::Box<'alloc, Parameter<'alloc>>,
+    ) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().formal_parameter_list_append(params, next_param)
+    }
+
+    // FunctionBody : FunctionStatementList
+    fn function_body(
+        &mut self,
+        statements: arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>,
+    ) -> arena::Box<'alloc, FunctionBody<'alloc>> {
+        self.ast_builder_refmut().function_body(statements)
+    }
+
+    // FunctionStatementList : StatementList?
+    fn function_statement_list(
+        &mut self,
+        statements: Option<arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>> {
+        self.ast_builder_refmut().function_statement_list(statements)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ArrowParameters : BindingIdentifier
+    fn arrow_parameters_bare(
+        &mut self,
+        identifier: arena::Box<'alloc, BindingIdentifier>,
+    ) -> arena::Box<'alloc, FormalParameters<'alloc>> {
+        self.ast_builder_refmut().arrow_parameters_bare(identifier)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ConciseBody : [lookahead != `{`] AssignmentExpression
+    fn concise_body_expression(
+        &mut self,
+        expression: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, ArrowExpressionBody<'alloc>> {
+        self.ast_builder_refmut().concise_body_expression(expression)
+    }
+
+    // ConciseBody : `{` FunctionBody `}`
+    fn concise_body_block(
+        &mut self,
+        body_open_token: arena::Box<'alloc, Token>,
+        body: arena::Box<'alloc, FunctionBody<'alloc>>,
+        body_close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, ArrowExpressionBody<'alloc>> {
+        self.ast_builder_refmut().concise_body_block(body_open_token, body, body_close_token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // MethodDefinition : `get` PropertyName `(` `)` `{` FunctionBody `}`
+    fn getter(
+        &mut self,
+        get_token: arena::Box<'alloc, Token>,
+        name: arena::Box<'alloc, PropertyName<'alloc>>,
+        body_open_token: arena::Box<'alloc, Token>,
+        body: arena::Box<'alloc, FunctionBody<'alloc>>,
+        body_close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, MethodDefinition<'alloc>> {
+        self.ast_builder_refmut().getter(get_token, name, body_open_token, body, body_close_token)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // YieldExpression : `yield`
+    // YieldExpression : `yield` AssignmentExpression
+    fn yield_expr(
+        &mut self,
+        yield_token: arena::Box<'alloc, Token>,
+        operand: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().yield_expr(yield_token, operand)
+    }
+
+    // YieldExpression : `yield` `*` AssignmentExpression
+    fn yield_star_expr(
+        &mut self,
+        yield_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().yield_star_expr(yield_token, operand)
+    }
+
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ClassTail : ClassHeritage? `{` ClassBody? `}`
+    fn class_tail(
+        &mut self,
+        heritage: Option<arena::Box<'alloc, Expression<'alloc>>>,
+        body: Option<
+            arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>>,
+        >,
+        body_close_token: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, ClassExpression<'alloc>> {
+        self.ast_builder_refmut().class_tail(heritage, body, body_close_token)
+    }
+
+    // ClassElementList : ClassElementList ClassElement
+    fn class_element_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>>,
+        element: arena::Box<
+            'alloc,
+            arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>,
+        >,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>> {
+        self.ast_builder_refmut().class_element_list_append(list, element)
+    }
+
+    // FieldDefinition : ClassElementName Initializer?
+    fn class_field_definition(
+        &mut self,
+        name: arena::Box<'alloc, ClassElementName<'alloc>>,
+        init: Option<arena::Box<'alloc, Expression<'alloc>>>,
+    ) -> arena::Box<'alloc, ClassElement<'alloc>> {
+        self.ast_builder_refmut().class_field_definition(name, init)
+    }
+
+    // ClassElementName : PropertyName
+    fn property_name_to_class_element_name(
+        &mut self,
+        name: arena::Box<'alloc, PropertyName<'alloc>>,
+    ) -> arena::Box<'alloc, ClassElementName<'alloc>> {
+        self.ast_builder_refmut().property_name_to_class_element_name(name)
+    }
+
+    // ClassElementName : PrivateIdentifier
+    fn class_element_name_private(
+        &mut self,
+        private_identifier: arena::Box<'alloc, Token>,
+    ) -> arena::Box<'alloc, ClassElementName<'alloc>> {
+        self.ast_builder_refmut().class_element_name_private(private_identifier)
+    }
+
+    // ClassElement : MethodDefinition
+    fn class_element(
+        &mut self,
+        method: arena::Box<'alloc, MethodDefinition<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>> {
+        self.ast_builder_refmut().class_element(method)
+    }
+
+    // ClassElement : FieldDefinition `;`
+    fn class_element_to_vec(
+        &mut self,
+        element: arena::Box<'alloc, ClassElement<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>> {
+        self.ast_builder_refmut().class_element_to_vec(element)
+    }
+
+    // ClassElement : `static` MethodDefinition
+    fn class_element_static(
+        &mut self,
+        static_token: arena::Box<'alloc, Token>,
+        method: arena::Box<'alloc, MethodDefinition<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>> {
+        self.ast_builder_refmut().class_element_static(static_token, method)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ClassElement : `;`
+    fn class_element_empty(
+        &mut self,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, arena::Box<'alloc, ClassElement<'alloc>>>> {
+        self.ast_builder_refmut().class_element_empty()
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // AwaitExpression : `await` UnaryExpression
+    fn await_expr(
+        &mut self,
+        await_token: arena::Box<'alloc, Token>,
+        operand: arena::Box<'alloc, Expression<'alloc>>,
+    ) -> arena::Box<'alloc, Expression<'alloc>> {
+        self.ast_builder_refmut().await_expr(await_token, operand)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ScriptBody : StatementList
+    fn script_body(
+        &mut self,
+        statements: arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>,
+    ) -> arena::Box<'alloc, Script<'alloc>> {
+        self.ast_builder_refmut().script_body(statements)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
+
+    // ModuleItemList : ModuleItem
+    fn module_item_list_single(
+        &mut self,
+        item: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>> {
+        self.ast_builder_refmut().module_item_list_single(item)
+    }
+
+    // ModuleItemList : ModuleItemList ModuleItem
+    fn module_item_list_append(
+        &mut self,
+        list: arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>>,
+        item: arena::Box<'alloc, Statement<'alloc>>,
+    ) -> arena::Box<'alloc, arena::Vec<'alloc, Statement<'alloc>>> {
+        self.ast_builder_refmut().module_item_list_append(list, item)
+    }
+
+    // .. TODO: In between actions to mirror AST Builder
 }
 
 impl<'alloc> AstBuilder<'alloc> {
