@@ -4,7 +4,7 @@ use crate::context_stack::{
 };
 use crate::declaration_kind::DeclarationKind;
 use crate::early_errors::*;
-use crate::error::{ParseError, Result};
+use crate::error::{BoxedParseError, ParseError, Result};
 use crate::Token;
 use ast::{
     arena,
@@ -683,6 +683,16 @@ impl<'alloc> EarlyErrorChecker<'alloc> for EarlyErrorBuilder<'alloc> {
 
 impl<'alloc> EarlyErrorBuilder<'alloc> {
 
+    fn collect_vec_from_results<T, C>(&self, results: C) -> Result<'alloc, ()>
+    where
+        C: IntoIterator<Item = Result<'alloc, T>>,
+    {
+        for result in results {
+            result?;
+        }
+        Ok(())
+    }
+
     // IdentifierReference : Identifier
     pub fn identifier_reference(
         &self,
@@ -810,6 +820,341 @@ impl<'alloc> EarlyErrorBuilder<'alloc> {
     ) -> Result<'alloc, ()> {
         self.expression_to_simple_assignment_target2(&*left_hand_side)?;
         Ok(())
+    }
+
+    // ArrowParameters : CoverParenthesizedExpressionAndArrowParameterList
+    pub fn uncover_arrow_parameters(
+        &self,
+        covered: &arena::Box<'alloc, CoverParenthesized<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        match &**covered {
+            CoverParenthesized::Expression { expression, .. } => Ok(self.expression_to_parameter_list(&expression)?),
+            CoverParenthesized::Parameters(_) => Ok(()),
+        }
+    }
+
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `)`
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `...` BindingIdentifier `)`
+    // CoverParenthesizedExpressionAndArrowParameterList : `(` Expression `,` `...` BindingPattern `)`
+    pub fn expression_to_parameter_list2(
+        &self,
+        expression: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        // When the production
+        // *ArrowParameters* `:` *CoverParenthesizedExpressionAndArrowParameterList*
+        // is recognized the following grammar is used to refine the
+        // interpretation of
+        // *CoverParenthesizedExpressionAndArrowParameterList*:
+        //
+        //     ArrowFormalParameters[Yield, Await]:
+        //         `(` UniqueFormalParameters[?Yield, ?Await] `)`
+        match &**expression {
+            Expression::BinaryExpression {
+                operator: BinaryOperator::Comma { .. },
+                left,
+                right,
+                ..
+            } => {
+                self.expression_to_parameter_list(left)?;
+                Ok(self.expression_to_parameter(right)?)
+            }
+            other => Ok(self.unboxed_expression_to_parameter(other)?),
+        }
+    }
+
+    pub fn expression_to_parameter_list(
+        &self,
+        expression: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        // When the production
+        // *ArrowParameters* `:` *CoverParenthesizedExpressionAndArrowParameterList*
+        // is recognized the following grammar is used to refine the
+        // interpretation of
+        // *CoverParenthesizedExpressionAndArrowParameterList*:
+        //
+        //     ArrowFormalParameters[Yield, Await]:
+        //         `(` UniqueFormalParameters[?Yield, ?Await] `)`
+        match &**expression {
+            Expression::BinaryExpression {
+                operator: BinaryOperator::Comma { .. },
+                left,
+                right,
+                ..
+            } => {
+                self.expression_to_parameter_list(&left)?;
+                Ok(self.expression_to_parameter(&right)?)
+            }
+            other => Ok(self.unboxed_expression_to_parameter(&other)?),
+        }
+    }
+
+    fn object_property_to_binding_property(
+        &self,
+        op: &ObjectProperty<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match op {
+            ObjectProperty::NamedObjectProperty(NamedObjectProperty::DataProperty(
+                DataProperty {
+                    expression,
+                    ..
+                },
+            )) => Ok(self.expression_to_parameter(&expression)?),
+
+            ObjectProperty::NamedObjectProperty(NamedObjectProperty::MethodDefinition(_)) => {
+                Err(ParseError::ObjectPatternWithMethod.into())
+            }
+
+            ObjectProperty::ShorthandProperty(ShorthandProperty {
+                name: IdentifierExpression { .. },
+                ..
+            }) => {
+                // TODO - CoverInitializedName can't be represented in an
+                // ObjectProperty, but we need it here.
+                Ok(())
+            }
+
+            ObjectProperty::SpreadProperty(_expression) => {
+                Err(ParseError::ObjectPatternWithNonFinalRest.into())
+            }
+        }
+    }
+
+    /// Refine an instance of "*PropertyDefinition* : `...`
+    /// *AssignmentExpression*" into a *BindingRestProperty*.
+    fn spread_expression_to_rest_binding(
+        &self,
+        expression: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        Ok(match **expression {
+            Expression::IdentifierExpression(IdentifierExpression { .. }) => (),
+            _ => {
+                return Err(ParseError::ObjectBindingPatternWithInvalidRest.into());
+            }
+        })
+    }
+
+    fn expression_to_binding_no_default(
+        &self,
+        expression: &Expression<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match expression {
+            Expression::IdentifierExpression(IdentifierExpression { .. }) => {
+                Ok(())
+            }
+
+            Expression::ArrayExpression(ArrayExpression { elements, ..}) => {
+                if let Some((rest, elems)) = elements.as_slice().split_last() {
+                    self.collect_vec_from_results(elems.into_iter().map(|element| match element {
+                        ArrayExpressionElement::Expression(expr) => {
+                                Ok(self.expression_to_parameter(expr)?)
+                            }
+                        ArrayExpressionElement::SpreadElement(_expr) =>
+                            // ([...a, b]) => {}
+                            Err(ParseError::ArrayPatternWithNonFinalRest.into()),
+                        ArrayExpressionElement::Elision { .. } => Ok(()),
+                    }))?;
+                    match rest {
+                        ArrayExpressionElement::SpreadElement(rest) =>
+                            self.expression_to_parameter_array(rest)?,
+                        _ => ()
+                    }
+                }
+                Ok(())
+            }
+
+            Expression::ObjectExpression(object) => Ok(self.object_expression_to_object_binding(object)?),
+
+            _ => Err(ParseError::InvalidParameter.into()),
+        }
+    }
+
+    fn expression_to_parameter_array(
+        &self,
+        expression: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        match &**expression {
+            Expression::AssignmentExpression {
+                binding,
+                ..
+            } => {
+                self.assignment_target_to_binding(binding)?;
+                let err: BoxedParseError =
+                    ParseError::ArrayBindingPatternWithInvalidRest.into();
+                Err(err)
+            },
+
+            other => Ok(self.expression_to_binding_no_default(other)?),
+        }
+    }
+
+    /// Refine an *ObjectLiteral* into an *ObjectBindingPattern*.
+    fn object_expression_to_object_binding(
+        &self,
+        object: &ObjectExpression<'alloc>,
+    ) -> Result<'alloc, ()> {
+        if let Some((rest, properties)) = object.properties.as_slice().split_last() {
+            self.collect_vec_from_results(
+                properties
+                    .into_iter()
+                    .map(|prop| self.object_property_to_binding_property(&**prop)),
+            )?;
+            if let ObjectProperty::SpreadProperty(rest) = &**rest {
+                self.spread_expression_to_rest_binding(rest)?
+            }
+        }
+        Ok(())
+    }
+
+    fn expression_to_parameter(
+        &self,
+        expression: &arena::Box<'alloc, Expression<'alloc>>,
+    ) -> Result<'alloc, ()> {
+        match &**expression {
+            Expression::AssignmentExpression {
+                binding,
+                ..
+            } => Ok(self.assignment_target_to_binding(binding)?),
+
+            other => Ok(self.expression_to_binding_no_default(other)?),
+        }
+    }
+
+    fn unboxed_expression_to_parameter(
+        &self,
+        expression: &Expression<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match expression {
+            Expression::AssignmentExpression {
+                binding,
+                ..
+            } => Ok(self.assignment_target_to_binding(binding)?),
+
+            other => Ok(self.expression_to_binding_no_default(other)?),
+        }
+    }
+
+    /// Used when parsing `([a, b=2]=arr) =>` to reinterpret as parameter bindings
+    /// the snippets `a` and `b=2`, which were previously parsed as assignment targets.
+    fn assignment_target_maybe_default_to_binding(
+        &self,
+        target: &AssignmentTargetMaybeDefault<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match target {
+            AssignmentTargetMaybeDefault::AssignmentTarget(target) => Ok(self.assignment_target_to_binding(target)?),
+
+            AssignmentTargetMaybeDefault::AssignmentTargetWithDefault(
+                AssignmentTargetWithDefault { binding, .. },
+            ) => Ok(self.assignment_target_to_binding(binding)?),
+        }
+    }
+
+    fn assignment_target_property_to_binding_property(
+        &self,
+        target: &AssignmentTargetProperty<'alloc>,
+    ) -> Result<'alloc, ()> {
+        Ok(match target {
+            AssignmentTargetProperty::AssignmentTargetPropertyIdentifier(
+                AssignmentTargetPropertyIdentifier {
+                    binding: AssignmentTargetIdentifier { .. },
+                    ..
+                },
+            ) => (),
+
+            AssignmentTargetProperty::AssignmentTargetPropertyProperty(
+                AssignmentTargetPropertyProperty { binding, .. },
+            ) => self.assignment_target_maybe_default_to_binding(binding)?,
+        })
+    }
+
+    /// Refine an AssignmentRestProperty into a BindingRestProperty.
+    fn assignment_rest_property_to_binding_identifier(
+        &self,
+        target: &AssignmentTarget<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match target {
+            // ({...x} = dv) => {}
+            AssignmentTarget::SimpleAssignmentTarget(
+                SimpleAssignmentTarget::AssignmentTargetIdentifier(AssignmentTargetIdentifier { .. }),
+            ) => Ok(()),
+
+            // ({...x.y} = dv) => {}
+            _ => Err(ParseError::ObjectBindingPatternWithInvalidRest.into()),
+        }
+    }
+
+    /// Refine the left-hand side of `=` to a parameter binding. The spec says:
+    ///
+    /// > When the production *ArrowParameters* :
+    /// > *CoverParenthesizedExpressionAndArrowParameterList* is recognized,
+    /// > the following grammar is used to refine the interpretation of
+    /// > *CoverParenthesizedExpressionAndArrowParameterList*:
+    /// >
+    /// > *ArrowFormalParameters*\[Yield, Await\] :
+    /// > `(` *UniqueFormalParameters*\[?Yield, ?Await\] `)`
+    ///
+    /// Of course, rather than actually reparsing the arrow function parameters,
+    /// we work by refining the AST we already built.
+    ///
+    /// When parsing `(a = 1, [b, c] = obj) => {}`, the assignment targets `a`
+    /// and `[b, c]` are passed to this method.
+    fn assignment_target_to_binding(
+        &self,
+        target: &AssignmentTarget<'alloc>,
+    ) -> Result<'alloc, ()> {
+        match target {
+            // (a = dv) => {}
+            AssignmentTarget::SimpleAssignmentTarget(
+                SimpleAssignmentTarget::AssignmentTargetIdentifier(AssignmentTargetIdentifier {
+                    ..
+                }),
+            ) => Ok(()),
+
+            // This case is always an early SyntaxError.
+            // (a.x = dv) => {}
+            // (a[i] = dv) => {}
+            AssignmentTarget::SimpleAssignmentTarget(
+                SimpleAssignmentTarget::MemberAssignmentTarget(_),
+            ) => Err(ParseError::InvalidParameter.into()),
+
+            // ([a, b] = dv) => {}
+            AssignmentTarget::AssignmentTargetPattern(
+                AssignmentTargetPattern::ArrayAssignmentTarget(ArrayAssignmentTarget {
+                    elements,
+                    rest,
+                    ..
+                }),
+            ) => {
+                let elements: &arena::Vec<'alloc, Option<AssignmentTargetMaybeDefault<'alloc>>> =
+                    &elements;
+                self.collect_vec_from_results(elements.into_iter().map(|maybe_target| {
+                    maybe_target.as_ref()
+                        .map(|target| self.assignment_target_maybe_default_to_binding(target))
+                        .transpose()
+                }))?;
+                if let Some(rest_target) = rest {
+                    self.assignment_target_to_binding(rest_target)?
+                };
+                Ok(())
+            }
+
+            // ({a, b: c} = dv) => {}
+            AssignmentTarget::AssignmentTargetPattern(
+                AssignmentTargetPattern::ObjectAssignmentTarget(ObjectAssignmentTarget {
+                    properties,
+                    rest,
+                    ..
+                }),
+            ) => {
+                self.collect_vec_from_results(properties.into_iter().map(|target| {
+                    self.assignment_target_property_to_binding_property(target)
+                }))?;
+
+                if let Some(rest_target) = rest {
+                    self.assignment_rest_property_to_binding_identifier(rest_target)?
+                };
+                Ok(())
+            }
+        }
     }
 
 }

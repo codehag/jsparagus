@@ -136,7 +136,7 @@ pub trait AstBuilderDelegate<'alloc> {
         &mut self,
         expression: arena::Box<'alloc, Expression<'alloc>>,
     ) -> Result<'alloc, arena::Vec<'alloc, Parameter<'alloc>>> {
-        // self.early_error_refmut().expression_to_parameter_list(&expression)?;
+        self.early_error_refmut().expression_to_parameter_list2(&expression)?;
         Ok(self.ast_builder_refmut().expression_to_parameter_list(expression)?)
     }
     // .. TODO: In between actions to mirror AST Builder
