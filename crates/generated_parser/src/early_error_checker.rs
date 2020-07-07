@@ -8,7 +8,7 @@ use crate::error::{BoxedParseError, ParseError, Result};
 use crate::Token;
 use ast::{
     arena,
-    source_atom_set::{SourceAtomSet, SourceAtomSetIndex},
+    source_atom_set::{CommonSourceAtomSetIndices, SourceAtomSet, SourceAtomSetIndex},
     types::*,
 };
 use std::cell::RefCell;
@@ -862,6 +862,7 @@ impl<'alloc> EarlyErrorBuilder<'alloc> {
         }
     }
 
+    // TODO: remove this
     pub fn expression_to_parameter_list(
         &self,
         expression: &arena::Box<'alloc, Expression<'alloc>>,
@@ -887,6 +888,19 @@ impl<'alloc> EarlyErrorBuilder<'alloc> {
             other => Ok(self.unboxed_expression_to_parameter(&other)?),
         }
     }
+
+    // LiteralPropertyName : IdentifierName
+    pub fn property_name_identifier(
+        &self,
+        token: &arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, ()> {
+        let value = token.value.as_atom();
+        if value == CommonSourceAtomSetIndices::__proto__() {
+            return Err(ParseError::NotImplemented("__proto__ as property name").into());
+        }
+        Ok(())
+    }
+
 
     fn object_property_to_binding_property(
         &self,

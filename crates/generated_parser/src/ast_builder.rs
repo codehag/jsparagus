@@ -141,6 +141,16 @@ pub trait AstBuilderDelegate<'alloc> {
     }
     // .. TODO: In between actions to mirror AST Builder
 
+    // LiteralPropertyName : IdentifierName
+    fn property_name_identifier(
+        &self,
+        token: arena::Box<'alloc, Token>,
+    ) -> Result<'alloc, arena::Box<'alloc, PropertyName<'alloc>>> {
+        self.early_error_refmut().property_name_identifier(&token)?;
+        Ok(self.ast_builder_refmut().property_name_identifier(token))
+    }
+
+
     // Literal : NullLiteral
     fn null_literal(
         &mut self,
@@ -2549,14 +2559,10 @@ impl<'alloc> AstBuilder<'alloc> {
     pub fn property_name_identifier(
         &self,
         token: arena::Box<'alloc, Token>,
-    ) -> Result<'alloc, arena::Box<'alloc, PropertyName<'alloc>>> {
+    ) -> arena::Box<'alloc, PropertyName<'alloc>> {
         let value = token.value.as_atom();
-        if value == CommonSourceAtomSetIndices::__proto__() {
-            return Err(ParseError::NotImplemented("__proto__ as property name").into());
-        }
-
         let loc = token.loc;
-        Ok(self.alloc_with(|| PropertyName::StaticPropertyName(StaticPropertyName { value, loc })))
+        self.alloc_with(|| PropertyName::StaticPropertyName(StaticPropertyName { value, loc }))
     }
 
     // LiteralPropertyName : StringLiteral
